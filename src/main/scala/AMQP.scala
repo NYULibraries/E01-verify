@@ -12,6 +12,7 @@ trait AMQPSupport {
   val factory = new ConnectionFactory
   val EXCHANGE_NAME = conf.getString("rabbitmq.exchange")
   
+  
   def getConnection(): Option[Connection] = {
     try {
       factory.setHost(conf.getString("rabbitmq.host"))

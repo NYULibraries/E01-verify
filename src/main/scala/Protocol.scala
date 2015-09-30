@@ -15,31 +15,25 @@ object Protocol {
 
   case class VerifyResult(id: UUID)
   case class VerifyRequest(id: UUID, file: File)
-  case class VerifyComplete(id: UUID, filename: String)
+  case class VerifyComplete(id: UUID)
   case class WriteLog(message: String)
   case class AMQPConnections(consumer: QueueingConsumer, publisher: Channel)
-  
-  case class Event(
-  	requestId: UUID, 
-  	eventType: String,
-  	path: String, 
-  	start: String, 
-  	end: Option[String], 
-  	result: Option[String]
-  )
+  case class Publish(message: String)
+
   
   case class Agent(
-  	name: String,
+  	agent: String,
   	version: String,
   	host: String
   )
 
-  case class Response(
+  case class Request(
   	version: String,
-  	request_id: String,
-  	outcome: String,
+  	request_id: UUID,
+    file: File,
+  	outcome: Option[String],
   	start_time: String,
-  	end_time: String,
+  	end_time: Option[String],
   	agent: Agent,
   	data: Option[String]
   )
