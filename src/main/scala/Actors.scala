@@ -43,29 +43,29 @@ class Supervisor() extends Actor with SysUtils {
 	def receive = {
 		
 		case vr: VerifyRequest => {
-				println("* Request to verify " + vr.file.getName + " received" )
-				val request = new Request("0.0.1", vr.id, vr.file, None, now(), None, getAgent, None)
-				requests = requests + (vr.id -> request)
-				validator ! vr
+			println("* Request to verify " + vr.file.getName + " received" )
+			val request = new Request("0.0.1", vr.id, vr.file, None, now(), None, getAgent, None)
+			requests = requests + (vr.id -> request)
+			validator ! vr
 		}
 
 		case vc: VerifyComplete => { 
 
-			//check the validation result
-			val request = requests(vc.id)
-		  val future = logReader ? new VerifyResult(vc.id)    
-    	val result = Await.result(future, timeout.duration).asInstanceOf[Boolean]
-    	
-    	result match {
-    		case true => {
-    			val newRequest = request.copy(outcome = Some("Success " + request.file.getName + " is Valid"), end_time = Some(now()))
-    			requests = requests + (vc.id -> newRequest)
-    		}
-    		case false => {
-    			val newRequest = request.copy(outcome = Some("Failure" + request.file.getName + " is not Valid"), end_time = Some(now()))
-    			requests = requests + (vc.id -> newRequest)
-    		}
-    	}
+		//check the validation result
+		val request = requests(vc.id)
+	  val future = logReader ? new VerifyResult(vc.id)    
+  	val result = Await.result(future, timeout.duration).asInstanceOf[Boolean]
+  	
+  	result match {
+  		case true => {
+  			val newRequest = request.copy(outcome = Some("Success " + request.file.getName + " is Valid"), end_time = Some(now()))
+  			requests = requests + (vc.id -> newRequest)
+  		}
+  		case false => {
+  			val newRequest = request.copy(outcome = Some("Failure" + request.file.getName + " is not Valid"), end_time = Some(now()))
+  			requests = requests + (vc.id -> newRequest)
+  		}
+  	}
 
     	publisher ! new Publish(createResult(requests(vc.id)))
 
@@ -149,7 +149,7 @@ class LogReader() extends Actor {
 }
 
 class Publisher(supervisor: ActorRef) extends Actor with AMQPSupport {
-	val connection = getConnection.get
+  val connection = getConnection.get
   val connections = getAMQPConnections(connection).get
   implicit val formats = DefaultFormats
 
@@ -172,19 +172,12 @@ class Consumer(supervisor: ActorRef) extends Actor with AMQPSupport {
  	  	val delivery = connections.consumer.nextDelivery()
       val message = new String(delivery.getBody())
       val json = parse(message)
-      val request_id = (json \ "request_id").extract[String]
-      val request_path = (json \ "path").extract[String]
-      val request_type = (json \ "type").extract[String]
-
-      request_type match {
-
-      	case "VERIFY" => { 
-      		val request = new VerifyRequest(UUID.fromString(request_id), new File(request_path))
-      		supervisor ! request
-      	}
-      }
-      //do something with a message
-      self ! Listen 
+      val request_id = UUID.fromString((json \ "request_id").extract[String])
+      val request_path = ((json \ "params") \ "request_path").extract[String]
+ 
+ 			//do something with a message
+      supervisor ! new VerifyRequest(request_id, new File(request_path))
+			self ! Listen 
   	}
   	case _ => println("Message Not Understood")
   }
